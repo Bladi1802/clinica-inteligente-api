@@ -1,10 +1,6 @@
-# Clínica Inteligente API
-API - Plataforma Inteligente de Citas y Diagnóstico Preventivo
+# Clinica Inteligente API
 
-API REST para gestión de usuarios y citas médicas en clínicas/consultorios pequeños y medianos.  
-El objetivo es reducir errores de agenda, mejorar la organización de horarios y preparar el sistema para un triaje preventivo (clasificación de riesgo) en fases futuras.
-
----
+API REST para gestion de usuarios, citas medicas y servicios en clinicas/consultorios pequenos y medianos. El objetivo es reducir errores de agenda, mejorar la organización de horarios y preparar el sistema para un triaje preventivo (clasificación de riesgo) en fases futuras.
 
 ## Dominio: Problema que resuelve
 
@@ -18,62 +14,168 @@ Esta API centraliza autenticación y gestión de citas para que un frontend web/
 
 ---
 
-## Stack (decisiones tecnológicas)
+## Estado actual
 
-- **Framework:** Django REST Framework (DRF)
-- **Lenguaje:** Python 3.14
-- **Auth:** JWT (djangorestframework-simplejwt)
-- **CORS:** django-cors-headers
-- **Base de datos:** SQLite3 (desarrollo local)
-- **Entorno virtual:** venv (obligatorio)
+- Backend en Django + DRF con JWT funcionando.
+- Frontend web (HTML/CSS/JS) para login, registro y gestion de citas.
+- Modelos de `triage` y `records` creados (sin endpoints REST activos por ahora).
 
-**Justificación:** DRF permite construir APIs REST robustas rápidamente, con buenas prácticas de autenticación/permisos, y una arquitectura escalable por apps.
+## Stack
 
----
+- Python 3.9 + (proyecto local con 3.14)
+- Django 6.0.2
+- Django REST Framework 3.16.1
+- Simple JWT
+- django-cors-headers
+- SQLite (desarrollo)
 
-## Alcance (Scope) y Recursos (MVP)
+## Estructura del proyecto
 
-### Recursos principales
+```text
+clinica-inteligente-api/
+  backend/
+    apps/
+      accounts/
+      scheduling/
+      triage/
+      records/
+    config/
+    manage.py
+  frontend/
+    index.html
+    assets/
+    js/
+  docs/
+    modelado/
+  requirements.txt
+```
 
-1) **Auth/Users** (`accounts`)
-- POST `/api/auth/register/` → registrar usuario
-- POST `/api/auth/token/` → login (JWT)
-- POST `/api/auth/token/refresh/` → refrescar JWT
-- GET `/api/auth/me/` → obtener usuario autenticado
+## Funcionalidades implementadas
 
-2) **Appointments** (`scheduling`) *(MVP planificado)*
-- GET `/api/appointments/` → listar citas del usuario
-- POST `/api/appointments/` → crear cita
-- GET `/api/appointments/{id}/` → detalle de cita
-- PATCH `/api/appointments/{id}/` → cancelar o actualizar estado
+### Auth y usuarios (`accounts`)
 
-3) **Triage** (`triage`) *(planeado)*
-- POST `/api/triage/` → enviar cuestionario
-- GET `/api/triage/history/` → historial de cuestionarios
+- Registro de usuario.
+- Login JWT.
+- Refresh de token.
+- Endpoint `/me` para usuario autenticado.
+- Usuario custom con roles: `PATIENT`, `DOCTOR`, `CLINIC`.
 
-4) **Records** (`records`) *(planeado)*
-- GET `/api/records/` → historial básico del paciente
-- POST `/api/records/` → agregar registro
+### Citas y servicios (`scheduling`)
 
----
+- CRUD de citas del usuario autenticado.
+- Validacion para no crear/editar citas en el pasado.
+- Catalogo de servicios.
+- CRUD de servicios (crear/editar/eliminar restringido a rol `CLINIC`).
+- Asignar servicios a una cita (tabla puente `AppointmentService`).
+- Calculo en respuesta de cita:
+  - `total_duration_minutes`
+  - `total_price`
 
-## Reglas de negocio (mínimo 5)
+### Dominio modelado (sin API expuesta aun)
 
-- Un usuario debe autenticarse con JWT para acceder a endpoints protegidos.
-- No se deben exponer contraseñas en responses.
-- No se puede agendar una cita en el pasado. *(MVP Scheduling)*
-- Un usuario no puede tener dos citas en la misma fecha/hora. *(MVP Scheduling)*
-- Una cita debe tener un estado controlado: `PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`. *(MVP Scheduling)*
-- Solo el dueño de la cita puede verla o cancelarla. *(MVP Scheduling)*
+- `triage`: modelo `TriageAssessment`.
+- `records`: modelo `MedicalRecord`.
 
----
+## Endpoints activos
 
-## Contrato preliminar (mock)
+Base URL local backend: `http://127.0.0.1:8000`
 
-### Endpoint 1: Registro
-**POST** `/api/auth/register/`
+### Auth
 
-Request:
+- `POST /api/auth/register/`
+- `POST /api/auth/token/`
+- `POST /api/auth/token/refresh/`
+- `GET /api/auth/me/`
+
+### Appointments
+
+- `GET /api/appointments/`
+- `POST /api/appointments/`
+- `GET /api/appointments/{id}/`
+- `PATCH /api/appointments/{id}/`
+- `DELETE /api/appointments/{id}/`
+
+### Services
+
+- `GET /api/services/`
+- `POST /api/services/` (solo rol `CLINIC`)
+- `GET /api/services/{id}/`
+- `PATCH /api/services/{id}/` (solo rol `CLINIC`)
+- `DELETE /api/services/{id}/` (solo rol `CLINIC`)
+
+### Appointment Services
+
+- `GET /api/appointments/{id}/services/`
+- `POST /api/appointments/{id}/services/`
+- `PATCH /api/appointments/{id}/services/{item_id}/`
+- `DELETE /api/appointments/{id}/services/{item_id}/`
+
+## Reglas de negocio actualmente en codigo
+
+- JWT obligatorio para endpoints protegidos.
+- `scheduled_at` debe ser fecha/hora futura.
+- Cada servicio se puede agregar una sola vez por cita (`uniq_appointment_service`).
+- Solo el dueno de la cita puede verla/editarla/eliminarla.
+- Solo usuarios con rol `CLINIC` pueden mutar servicios.
+
+## Instalacion y ejecucion local
+
+## 1) Clonar repositorio
+
+```bash
+git clone <URL_DEL_REPO>
+cd clinica-inteligente-api
+```
+
+## 2) Crear y activar entorno virtual
+
+Windows PowerShell:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
+## 3) Instalar dependencias
+
+```bash
+pip install -r requirements.txt
+```
+
+## 4) Migraciones
+
+```bash
+cd backend
+python manage.py migrate
+```
+
+## 5) Ejecutar backend
+
+```bash
+python manage.py runserver
+```
+
+Backend: `http://127.0.0.1:8000`
+
+## 6) Ejecutar frontend
+
+En otra terminal:
+
+```bash
+cd frontend
+python -m http.server 5500
+```
+
+Frontend: `http://127.0.0.1:5500`
+
+Nota: `frontend/js/config.js` usa por defecto `http://127.0.0.1:8000` como API base.
+
+## Ejemplos rapidos
+
+### Registro
+
+`POST /api/auth/register/`
+
 ```json
 {
   "username": "paciente1",
@@ -82,60 +184,50 @@ Request:
   "role": "PATIENT",
   "phone": "6640000000"
 }
+```
 
-{
-  "id": 2,
-  "username": "paciente1",
-  "email": "paciente1@mail.com",
-  "role": "PATIENT",
-  "phone": "6640000000"
-}
+### Login
 
-### Endpoint 2: Login (JWT)
+`POST /api/auth/token/`
 
-**POST** `/api/auth/token/`
-
-Request:
 ```json
-
 {
   "username": "paciente1",
   "password": "Password123!"
 }
+```
 
-Response (200):
+### Crear cita
+
+`POST /api/appointments/`
+
+```json
 {
-  "refresh": "JWT_REFRESH_TOKEN",
-  "access": "JWT_ACCESS_TOKEN"
+  "scheduled_at": "2026-03-01T15:30:00",
+  "reason": "Consulta general"
 }
+```
 
----
+### Agregar servicio a cita
 
-## Instalación y ejecución local (OBLIGATORIO)
-1) Clonar repositorio
+`POST /api/appointments/10/services/`
 
--git clone <URL_DEL_REPO>
--cd clinica-inteligente-api
+```json
+{
+  "service_id": 2,
+  "quantity": 1
+}
+```
 
-## 2) Crear entorno virtual (venv)
+## Documentacion adicional
 
--Windows (CMD/PowerShell): python -m venv .venv
+- Modelado de dominio: `docs/modelado/README.md`
+- DER: `docs/modelado/DER.md`
+- UML: `docs/modelado/UML.md`
 
-## 3) Activar entorno virtual
+## Roadmap corto
 
--Windows (CMD): .venv\Scripts\activate
--Windows (PowerShell): .venv\Scripts\Activate.ps1
-
-## 4) Instalar dependencias
-- pip install -r requirements.txt
-
-## 5) Ejecutar migraciones
-- cd backend
--python manage.py migrate
-
-## 6) Correr servidor
-- python manage.py runserver
-- Servidor local: http://127.0.0.1:8000/
-
----
-
+- Exponer endpoints REST para `triage`.
+- Exponer endpoints REST para `records`.
+- Agregar pruebas automatizadas de negocio y permisos.
+- Preparar configuracion para entorno de produccion (variables de entorno y DB externa).
