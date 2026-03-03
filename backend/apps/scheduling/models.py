@@ -7,12 +7,21 @@ class Appointment(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
         CONFIRMED = "CONFIRMED", "Confirmed"
+        COMPLETED = "COMPLETED", "Completed"
         CANCELLED = "CANCELLED", "Cancelled"
 
     patient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="appointments",
+    )
+
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="appointments_as_doctor",
     )
 
     scheduled_at = models.DateTimeField()
@@ -29,7 +38,7 @@ class Appointment(models.Model):
 
     def __str__(self):
         return f"Appointment({self.patient_id}) @ {self.scheduled_at}"
-
+    
 class Service(models.Model):
     name = models.CharField(max_length=120, unique=True)
     duration_minutes = models.PositiveIntegerField()
@@ -68,3 +77,27 @@ class AppointmentService(models.Model):
 
     def __str__(self):
         return f"{self.appointment_id} - {self.service_id}"
+
+class MedicalRecord(models.Model):
+    appointment = models.ForeignKey(
+        "scheduling.Appointment",
+        on_delete=models.CASCADE,
+        related_name="medical_records",
+    )
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="medical_records_written",
+    )
+    diagnosis = models.TextField()
+    notes = models.TextField(blank=True)
+    treatment = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"MedicalRecord(appt={self.appointment_id}, doctor={self.doctor_id})"

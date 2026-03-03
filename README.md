@@ -70,11 +70,19 @@ clinica-inteligente-api/
 - Calculo en respuesta de cita:
   - `total_duration_minutes`
   - `total_price`
+- Asignacion de doctor a cita por CLINIC.
+- Endpoints para DOCTOR:
+ - `Listar sus citas asignadas.`
+ - `Actualizar su cita asignada.`
+ - `Cambiar estado a COMPLETED o CANCELLED.`
+- Records medicos por cita:
+ - `Crear record (solo doctor asignado).`
+ - `Listar records (patient dueno, doctor asignado o clinic).`
 
 ### Dominio modelado (sin API expuesta aun)
 
 - `triage`: modelo `TriageAssessment`.
-- `records`: modelo `MedicalRecord`.
+
 
 ## Endpoints activos
 
@@ -94,6 +102,7 @@ Base URL local backend: `http://127.0.0.1:8000`
 - `GET /api/appointments/{id}/`
 - `PATCH /api/appointments/{id}/`
 - `DELETE /api/appointments/{id}/`
+- `PATCH /api/appointments/{id}/assign-doctor/ (solo rol CLINIC)`
 
 ### Services
 
@@ -110,13 +119,29 @@ Base URL local backend: `http://127.0.0.1:8000`
 - `PATCH /api/appointments/{id}/services/{item_id}/`
 - `DELETE /api/appointments/{id}/services/{item_id}/`
 
+### Doctor Workflow
+
+- `GET /api/doctor/appointments/ (solo rol DOCTOR)`
+- `PATCH /api/doctor/appointments/{id}/ (solo doctor asignado)`
+- `PATCH /api/doctor/appointments/{id}/status/` 
+-  `(solo doctor asignado, estado permitido:  COMPLETED, CANCELLED)`
+
+### Medical Records
+
+- `POST /api/appointments/{id}/records/ (solo doctor asignado)`
+- `GET /api/appointments/{id}/records/ (patient dueno, doctor asignado o clinic)`
+
 ## Reglas de negocio actualmente en codigo
 
 - JWT obligatorio para endpoints protegidos.
 - `scheduled_at` debe ser fecha/hora futura.
 - Cada servicio se puede agregar una sola vez por cita (`uniq_appointment_service`).
 - Solo el dueno de la cita puede verla/editarla/eliminarla.
-- Solo usuarios con rol `CLINIC` pueden mutar servicios.
+- Unicamente usuarios con rol `CLINIC` pueden mutar servicios.
+- Solo CLINIC puede asignar doctor a una cita.
+- Unicamente el doctor asignado puede actualizar su cita asignada y cambiar estado clinico.
+- Solo el doctor asignado puede crear records medicos en la cita.
+- Records medicos visibles por paciente dueño, doctor asignado y clinic.
 
 ## Instalacion y ejecucion local
 
@@ -219,15 +244,62 @@ Nota: `frontend/js/config.js` usa por defecto `http://127.0.0.1:8000` como API b
 }
 ```
 
+### Asignar doctor a cita (CLINIC)
+
+`PATCH /api/appointments/10/assign-doctor/`
+
+```json
+{
+  "doctor_id": 3
+}
+```
+
+### Actualizar estado de cita (Solo DOCTOR asignado)
+
+`PATCH /api/doctor/appointments/10/status/`
+
+```json
+{
+  "status": "COMPLETED"
+}
+```
+
+### Crear nota medica (Solo DOCTOR asignado)
+
+`POST /api/appointments/10/records/`
+
+```json
+{
+  "diagnosis": "Hipertension controlada",
+  "notes": "Paciente estable, sin dolor toracico.",
+  "treatment": "Losartan 50mg cada 24h"
+}
+```
+
+### Pruebas automatizadas
+- Ejecutar pruebas de scheduling:
+
+```bash
+python manage.py test apps.scheduling
+```
+- Cobertura actual incluye:
+- Permisos de servicios (PATIENT bloqueado, CLINIC permitido).
+- Validacion de citas en pasado.
+- Flujo de records medicos:
+ - `doctor asignado crea record (201)`
+ - `doctor no asignado no crea (403)`
+ - `patient dueno lista records (200)`
+ - `clinic lista records (200)`
+
 ## Documentacion adicional
 
-- Modelado de dominio: `docs/modelado/README.md`
+- Modelado de dominio: `README.md`
 - DER: `docs/modelado/DER.md`
 - UML: `docs/modelado/UML.md`
 
 ## Roadmap corto
 
 - Exponer endpoints REST para `triage`.
-- Exponer endpoints REST para `records`.
-- Agregar pruebas automatizadas de negocio y permisos.
+- Agregar detalle/edicion de records medicos `(GET/PATCH por record).`
+- Agregar filtros por estado/doctor/fecha para citas.
 - Preparar configuracion para entorno de produccion (variables de entorno y DB externa).

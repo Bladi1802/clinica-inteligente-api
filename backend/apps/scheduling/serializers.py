@@ -1,7 +1,7 @@
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import Appointment, Service, AppointmentService
+from .models import Appointment, Service, AppointmentService, MedicalRecord
 
 
 class AppointmentServiceSerializer(serializers.ModelSerializer):
@@ -24,32 +24,38 @@ class AppointmentServiceSerializer(serializers.ModelSerializer):
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
+    # ✅ nuevo: doctor visible (id)
+    doctor = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    # ✅ ya lo tenías: resumen de servicios y totales
     services = serializers.SerializerMethodField()
     total_duration_minutes = serializers.SerializerMethodField()
     total_price = serializers.SerializerMethodField()
 
     class Meta:
         model = Appointment
-        fields = (
+        fields = [
             "id",
             "scheduled_at",
             "reason",
             "status",
+            "doctor",
             "services",
             "total_duration_minutes",
             "total_price",
             "created_at",
             "updated_at",
-        )
-        read_only_fields = (
+        ]
+        read_only_fields = [
             "id",
             "status",
+            "doctor",
             "services",
             "total_duration_minutes",
             "total_price",
             "created_at",
             "updated_at",
-        )
+        ]
 
     def validate_scheduled_at(self, value):
         if value <= timezone.now():
@@ -87,3 +93,21 @@ class ServiceSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+class MedicalRecordSerializer(serializers.ModelSerializer):
+    doctor_username = serializers.CharField(source="doctor.username", read_only=True)
+
+    class Meta:
+        model = MedicalRecord
+        fields = [
+            "id",
+            "appointment",
+            "doctor",
+            "doctor_username",
+            "diagnosis",
+            "notes",
+            "treatment",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "appointment", "doctor", "doctor_username", "created_at", "updated_at"]

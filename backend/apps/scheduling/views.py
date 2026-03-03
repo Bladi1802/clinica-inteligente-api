@@ -1,7 +1,7 @@
 from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-
+from apps.accounts.permissions import IsDoctor
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -9,11 +9,12 @@ from rest_framework.response import Response
 
 from apps.accounts.permissions import IsClinic
 
-from .models import Appointment, Service, AppointmentService
+from .models import Appointment, Service, AppointmentService, MedicalRecord
 from .serializers import (
     AppointmentSerializer,
     ServiceSerializer,
     AppointmentServiceSerializer,
+    MedicalRecordSerializer,
 )
 
 
@@ -279,3 +280,135 @@ def appointment_service_detail(request, pk: int, item_id: int):
 
     item.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def assign_doctor(request, pk: int):
+    appointment = get_object_or_404(Appointment, pk=pk)
+
+    perm = IsClinic()
+    if not perm.has_permission(request, None):
+        return Response({"detail": perm.message}, status=status.HTTP_403_FORBIDDEN)
+
+    doctor_id = request.data.get("doctor_id")
+    if not doctor_id:
+        return Response({"detail": "doctor_id es requerido."}, status=status.HTTP_400_BAD_REQUEST)
+
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    doctor = get_object_or_404(User, pk=doctor_id, role=User.Role.DOCTOR)
+
+    appointment.doctor = doctor
+    appointment.status = Appointment.Status.CONFIRMED
+    appointment.save(update_fields=["doctor", "status", "updated_at"])
+
+    return Response(AppointmentSerializer(appointment).data, status=status.HTTP_200_OK)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def doctor_appointments(request):
+    perm = IsDoctor()
+    if not perm.has_permission(request, None):
+        return Response({"detail": perm.message}, status=status.HTTP_403_FORBIDDEN)
+
+    qs = (
+        Appointment.objects
+        .filter(doctor=request.user)
+        .order_by("-scheduled_at")
+    )
+    return Response(AppointmentSerializer(qs, many=True).data, status=status.HTTP_200_OK)
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def doctor_update_appointment_status(request, pk: int):
+    perm = IsDoctor()
+    if not perm.has_permission(request, None):
+        return Response({"detail": perm.message}, status=status.HTTP_403_FORBIDDEN)
+
+    appointment = get_object_or_404(Appointment, pk=pk, doctor=request.user)
+
+    new_status = request.data.get("status")
+    allowed = {Appointment.Status.COMPLETED, Appointment.Status.CANCELLED}
+
+    if new_status not in allowed:
+        return Response(
+            {"detail": f"status inválido. Permitidos: {', '.join(sorted(allowed))}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    appointment.status = new_status
+    appointment.save(update_fields=["status", "updated_at"])
+
+    return Response(AppointmentSerializer(appointment).data, status=status.HTTP_200_OK)
+
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def doctor_update_appointment(request, pk: int):
+    perm = IsDoctor()
+    if not perm.has_permission(request, None):
+        return Response({"detail": perm.message}, status=status.HTTP_403_FORBIDDEN)
+
+    appt = get_object_or_404(Appointment, pk=pk, doctor=request.user)
+
+    allowed_fields = {"reason", "scheduled_at"}
+    data = {k: v for k, v in request.data.items() if k in allowed_fields}
+
+    if not data:
+        return Response(
+            {"detail": "No hay campos válidos para actualizar. Permitidos: reason, scheduled_at"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Validar fecha si viene
+    if "scheduled_at" in data and data["scheduled_at"]:
+        # AppointmentSerializer ya valida que sea futuro, pero esto evita bypass si cambias el serializer
+        try:
+            serializer = AppointmentSerializer(appt, data=data, partial=True)
+            serializer.is_valid(raise_exception=True)
+        except Exception:
+            raise
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    serializer = AppointmentSerializer(appt, data=data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def appointment_medical_records(request, pk: int):
+    appointment = get_object_or_404(
+        Appointment.objects.select_related("patient", "doctor"),
+        pk=pk,
+    )
+
+    user = request.user
+    is_patient_owner = appointment.patient_id == user.id
+    is_assigned_doctor = appointment.doctor_id == user.id
+    is_clinic = getattr(user, "role", None) == "CLINIC"
+
+    # GET: patient dueño, doctor asignado o clinic
+    if request.method == "GET":
+        if not (is_patient_owner or is_assigned_doctor or is_clinic):
+            return Response({"detail": "No tienes permiso para ver los records de esta cita."}, status=status.HTTP_403_FORBIDDEN)
+
+        qs = MedicalRecord.objects.filter(appointment=appointment).select_related("doctor")
+        return Response(MedicalRecordSerializer(qs, many=True).data, status=status.HTTP_200_OK)
+
+    # POST: solo doctor asignado
+    perm = IsDoctor()
+    if not perm.has_permission(request, None):
+        return Response({"detail": perm.message}, status=status.HTTP_403_FORBIDDEN)
+
+    if not is_assigned_doctor:
+        return Response({"detail": "Solo el doctor asignado puede crear records en esta cita."}, status=status.HTTP_403_FORBIDDEN)
+
+    serializer = MedicalRecordSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    record = serializer.save(appointment=appointment, doctor=user)
+
+    return Response(MedicalRecordSerializer(record).data, status=status.HTTP_201_CREATED)
