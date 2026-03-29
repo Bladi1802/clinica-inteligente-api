@@ -17,9 +17,12 @@ class TriageAssessment(models.Model):
     )
 
     chief_complaint = models.CharField(max_length=255)
-    risk_level = models.CharField(max_length=10, choices=RiskLevel.choices, default=RiskLevel.LOW)
+    risk_level = models.CharField(
+        max_length=10,
+        choices=RiskLevel.choices,
+        default=RiskLevel.LOW,
+    )
     risk_score = models.PositiveIntegerField(default=0)
-
     answers = models.JSONField(default=dict, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)

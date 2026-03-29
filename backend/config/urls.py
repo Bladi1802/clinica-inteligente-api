@@ -28,6 +28,8 @@ urlpatterns = [
     # Apps
     path("api/", include("accounts.urls")),
     path("api/", include("scheduling.urls")),
+    path("api/", include("triage.urls")),
+
 ]
 
 

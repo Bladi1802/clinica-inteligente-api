@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+:root {
+  font-family: Manrope, system-ui, sans-serif;
+  color: #f8fafc;
+  background-color: #0b1326;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(0, 102, 255, 0.18), transparent 25%),
+    radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.14), transparent 25%),
+    #0b1326;
+}

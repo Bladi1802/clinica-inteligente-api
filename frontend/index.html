@@ -1,120 +1,12 @@
 <!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CLINICA-INTELIGENTE</title>
-
-  <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
-
-  <link rel="stylesheet" href="assets/css/styles.css" />
-  <link rel="stylesheet" href="assets/css/dashboard.css" />
-
-  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.1/css/all.css" crossorigin="anonymous">
-</head>
-
-<body>
-  <div class="layout">
-    <!-- Sidebar -->
-    <aside id="sideBar" class="side-bar">
-      <div class="side-bar-content">
-        <button id="closeMenuBtn" aria-label="Cerrar menú">
-          <i class="fas fa-times"></i>
-        </button>
-
-        <div class="logo-content">
-          <img src="assets/img/logo.png" alt="Logo Clinica Inteligente"
-               onerror="this.style.display='none'" />
-          <h2>CLINICA~INTELIGENTE</h2>
-        </div>
-
-        <div class="profile">
-          <img id="userPhoto" src="assets/img/empty-user.png" alt="Foto de usuario"
-               onerror="this.style.display='none'" />
-          <h3 id="userName">Usuario</h3>
-          <span id="userRole" class="muted">No autenticado</span>
-        </div>
-
-        <hr width="100%" />
-
-        <nav class="navigation" aria-label="Navegación principal">
-          <div class="nav-item" data-view="dashboard">
-            <i class="fas fa-chart-line"></i>
-            <strong>Dashboard</strong>
-          </div>
-
-          <div class="nav-item" data-view="citas">
-            <i class="fas fa-calendar-check"></i>
-            <strong>Citas</strong>
-          </div>
-
-          <!-- Pacientes -> va a tu vista de registro -->
-          <div class="nav-item" data-view="register">
-            <i class="fas fa-user-injured"></i>
-            <strong>Pacientes</strong>
-          </div>
-
-          <div class="nav-item" data-view="login" id="logoutBtn">
-            <i class="fas fa-sign-out-alt"></i>
-            <strong>Cerrar sesión</strong>
-          </div>
-        </nav>
-      </div>
-    </aside>
-
-    <!-- Main -->
-    <div class="main">
-      <header class="header">
-        <button id="menuBtn" class="icon-button" aria-label="Abrir menú">
-          <i class="fas fa-bars"></i>
-        </button>
-
-        <div class="logo-content">
-          <img src="assets/img/logo.png" alt="Logo Clinica Inteligente"
-               onerror="this.style.display='none'" />
-          <h2>CLINICA~INTELIGENTE</h2>
-        </div>
-
-        <div class="search-bar">
-          <button id="searchBtn" class="icon-button" aria-label="Buscar">
-            <i class="fas fa-search"></i>
-          </button>
-          <input id="searchTxt" type="text" placeholder="Buscar citas/pacientes..." />
-        </div>
-
-        <div class="profile">
-          <img id="userPhotoHeader" src="assets/img/empty-user.png" alt="Foto de usuario"
-               onerror="this.style.display='none'" />
-          <h4 id="userNameHeader">Usuario</h4>
-        </div>
-
-        <button id="logoutHeaderBtn" class="icon-button-primary" aria-label="Cerrar sesión">
-          <i class="fas fa-sign-out-alt"></i>
-        </button>
-      </header>
-
-      <main class="container">
-        <section class="card">
-          <div class="card__header">
-            <h2 id="viewTitle">Login</h2>
-            <p class="muted" id="viewSubtitle">Conéctate a tu API</p>
-          </div>
-          <div class="card__body" id="app"></div>
-        </section>
-
-        <section class="card">
-          <div class="card__header">
-            <h3>Consola</h3>
-            <p class="muted">Respuestas rápidas de la API</p>
-          </div>
-          <pre class="console" id="console"></pre>
-        </section>
-      </main>
-    </div>
-  </div>
-
-  <!-- ✅ ORDEN CORRECTO: primero layout, luego app (y SOLO una vez) -->
-  <script type="module" src="js/layout.js"></script>
-  <script type="module" src="js/app.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clinica Inteligente</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

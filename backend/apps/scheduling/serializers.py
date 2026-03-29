@@ -1,7 +1,16 @@
 from django.utils import timezone
 from rest_framework import serializers
+from .models import (
+    Appointment, 
+    Service, 
+    AppointmentService, 
+    MedicalRecord, 
+    DoctorSchedule, 
+    AppointmentReminder,
+    TelemedicineSession,
+    DigitalPrescription,
+)
 
-from .models import Appointment, Service, AppointmentService, MedicalRecord
 
 
 class AppointmentServiceSerializer(serializers.ModelSerializer):
@@ -111,3 +120,82 @@ class MedicalRecordSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "appointment", "doctor", "doctor_username", "created_at", "updated_at"]
+
+class DoctorScheduleSerializer(serializers.ModelSerializer):
+    doctor_username = serializers.CharField(source="doctor.username", read_only=True)
+
+    class Meta:
+        model = DoctorSchedule
+        fields = [
+            "id",
+            "doctor",
+            "doctor_username",
+            "day_of_week",
+            "start_time",
+            "end_time",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "doctor_username", "created_at", "updated_at"]
+
+    def validate(self, attrs):
+        start_time = attrs.get("start_time", getattr(self.instance, "start_time", None))
+        end_time = attrs.get("end_time", getattr(self.instance, "end_time", None))
+
+        if start_time and end_time and start_time >= end_time:
+            raise serializers.ValidationError("start_time debe ser menor que end_time.")
+        return attrs
+
+class AppointmentReminderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AppointmentReminder
+        fields = [
+            "id",
+            "appointment",
+            "channel",
+            "scheduled_for",
+            "sent_at",
+            "status",
+            "error_message",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "appointment", "sent_at", "status", "error_message", "created_at", "updated_at"]
+
+
+class TelemedicineSessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TelemedicineSession
+        fields = [
+            "id",
+            "appointment",
+            "meeting_url",
+            "access_code",
+            "status",
+            "started_at",
+            "ended_at",
+            "notes",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "appointment", "created_at", "updated_at"]
+
+
+class DigitalPrescriptionSerializer(serializers.ModelSerializer):
+    doctor_username = serializers.CharField(source="doctor.username", read_only=True)
+
+    class Meta:
+        model = DigitalPrescription
+        fields = [
+            "id",
+            "telemedicine_session",
+            "doctor",
+            "doctor_username",
+            "indications",
+            "medications",
+            "recommendations",
+            "issued_at",
+        ]
+        read_only_fields = ["id", "telemedicine_session", "doctor", "doctor_username", "issued_at"]
+
